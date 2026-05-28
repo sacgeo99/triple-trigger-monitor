@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Triple Trigger Monitor — India Economic Stress Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #0a0c0f;
+      --bg2:      #111419;
+      --bg3:      #181d24;
+      --border:   #1f2733;
+      --border2:  #2a3444;
+      --text:     #e8edf5;
+      --muted:    #6b7a92;
+      --dim:      #3a4558;
+
+      --safe:     #22c55e;
+      --safe-bg:  #052010;
+      --safe-bd:  #0f4020;
+
+      --warn:     #f59e0b;
+      --warn-bg:  #1a1000;
+      --warn-bd:  #3a2500;
+
+      --danger:   #ef4444;
+      --danger-bg:#1a0505;
+      --danger-bd:#3a0f0f;
+
+      --accent:   #3b82f6;
+      --accent2:  #6366f1;
+
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 24px 20px 60px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .header-left h1 {
+      font-family: var(--font-head);
+      font-size: clamp(22px, 4vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #e8edf5 0%, #6b7a92 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-left .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .last-updated { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
+    .refresh-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { background: var(--border2); border-color: var(--accent); color: var(--accent); }
+    .refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── STATUS BANNER ──────────────────────────────────── */
+    .banner {
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 15px;
+      border: 1px solid;
+      transition: all 0.5s;
+    }
+    .banner .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+    /* ── SECTION LABEL ──────────────────────────────────── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-left: 2px;
+    }
+
+    /* ── EARLY WARNING RADAR ────────────────────────────── */
+    .radar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .radar-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .radar-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: 10px 10px 0 0;
+      transition: background 0.3s;
+    }
+    .radar-card.safe   { border-color: var(--safe-bd);   }
+    .radar-card.safe::before   { background: var(--safe);   }
+    .radar-card.warn   { border-color: var(--warn-bd);   }
+    .radar-card.warn::before   { background: var(--warn);   }
+    .radar-card.danger { border-color: var(--danger-bd); }
+    .radar-card.danger::before { background: var(--danger); }
+
+    .radar-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+    .radar-value {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+      transition: color 0.3s;
+    }
+    .radar-card.safe   .radar-value { color: var(--safe);   }
+    .radar-card.warn   .radar-value { color: var(--warn);   }
+    .radar-card.danger .radar-value { color: var(--danger); }
+    .radar-status {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .radar-trend {
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .radar-card.safe   .radar-trend { color: var(--safe);   }
+    .radar-card.warn   .radar-trend { color: var(--warn);   }
+    .radar-card.danger .radar-trend { color: var(--danger); }
+
+    /* ── TRIGGER CARDS ──────────────────────────────────── */
+    .triggers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .trigger-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .trigger-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+      transition: background 0.3s;
+    }
+    .trigger-card.safe   { border-color: var(--safe-bd);   }
+    .trigger-card.safe::before   { background: var(--safe);   }
+    .trigger-card.warn   { border-color: var(--warn-bd);   }
+    .trigger-card.warn::before   { background: var(--warn);   }
+    .trigger-card.danger { border-color: var(--danger-bd); }
+    .trigger-card.danger::before { background: var(--danger); }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .card-name { font-family: var(--font-head); font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .status-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .safe   .status-badge { background: var(--safe-bg);   color: var(--safe);   border: 1px solid var(--safe-bd);   }
+    .warn   .status-badge { background: var(--warn-bg);   color: var(--warn);   border: 1px solid var(--warn-bd);   }
+    .danger .status-badge { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bd); }
+
+    .card-value { font-family: var(--font-head); font-size: clamp(28px, 5vw, 38px); font-weight: 800; line-height: 1; margin-bottom: 4px; transition: color 0.3s; }
+    .safe   .card-value { color: var(--safe);   }
+    .warn   .card-value { color: var(--warn);   }
+    .danger .card-value { color: var(--danger); }
+
+    .card-threshold { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .card-threshold span { color: var(--text); font-weight: 500; }
+
+    .progress-wrap { background: var(--bg3); border-radius: 4px; height: 6px; width: 100%; overflow: hidden; margin-bottom: 10px; }
+    .progress-bar { height: 6px; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1), background 0.3s; max-width: 100%; }
+    .safe   .progress-bar { background: var(--safe);   }
+    .warn   .progress-bar { background: var(--warn);   }
+    .danger .progress-bar { background: var(--danger); }
+
+    .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+    .card-meta .months { font-weight: 600; }
+    .safe   .card-meta .months { color: var(--safe);   }
+    .warn   .card-meta .months { color: var(--warn);   }
+    .danger .card-meta .months { color: var(--danger); }
+
+    /* ── CITY COMPARISON ────────────────────────────────── */
+    .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+    .city-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+    .city-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .city-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .city-name { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+    .city-state { font-size: 11px; color: var(--muted); margin-left: auto; }
+    .city-price { font-family: var(--font-head); font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .city-unit { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+    .city-breakdown { display: flex; flex-direction: column; gap: 6px; }
+    .breakdown-row { display: flex; justify-content: space-between; font-size: 11px; }
+    .breakdown-label { color: var(--muted); }
+    .breakdown-val   { color: var(--text); font-weight: 500; }
+    .city-delta { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+    .city-delta span { font-weight: 600; }
+
+    /* ── CRUDE + INR ROW ────────────────────────────────── */
+    .live-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .live-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+    .live-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .live-value { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .live-sub { font-size: 10px; color: var(--muted); }
+    .live-change { font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .up   { color: var(--danger); }
+    .down { color: var(--safe);   }
+    .flat { color: var(--muted);  }
+
+    /* ── INTERVENTION TABLE ─────────────────────────────── */
+    .interventions { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 28px; }
+    .int-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 10px 20px; background: var(--bg3); border-bottom: 1px solid var(--border); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; gap: 8px; }
+    .int-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 13px 20px; border-bottom: 1px solid var(--border); gap: 8px; align-items: center; transition: background 0.15s; }
+    .int-row:last-child { border-bottom: none; }
+    .int-row:hover { background: var(--bg3); }
+    .int-name { font-size: 12px; color: var(--text); font-weight: 500; }
+    .int-name .sub { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+    .int-status { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-align: center; width: fit-content; }
+    .status-active   { background: var(--safe-bg);   color: var(--safe);   border: 1px solid var(--safe-bd);   }
+    .status-partial  { background: var(--warn-bg);   color: var(--warn);   border: 1px solid var(--warn-bd);   }
+    .status-inactive { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bd); }
+    .int-hold { font-size: 12px; font-weight: 600; color: var(--text); text-align: center; }
+    .int-drain { font-size: 11px; color: var(--muted); }
+
+    /* ── HOLDOUT VERDICT ────────────────────────────────── */
+    .verdict {
+      border-radius: 12px;
+      border: 1px solid;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 20px;
+      align-items: start;
+    }
+    .verdict-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .verdict-text { font-family: var(--font-head); font-size: 15px; font-weight: 600; line-height: 1.5; }
+    .verdict-months { font-family: var(--font-head); font-size: 52px; font-weight: 800; line-height: 1; text-align: center; white-space: nowrap; }
+    .verdict-months-label { font-size: 11px; text-align: center; margin-top: 4px; opacity: 0.7; }
+
+    /* ── PRESSURE INDEX BOX ─────────────────────────────── */
+    .pressure-box {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      min-width: 160px;
+    }
+    .pressure-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .pressure-score {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .pressure-label {
+      font-size: 9px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .pressure-bars { display: flex; flex-direction: column; gap: 5px; }
+    .pbar-row { display: flex; align-items: center; gap: 6px; }
+    .pbar-name { font-size: 9px; color: var(--muted); width: 44px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pbar-wrap { flex: 1; background: var(--bg); border-radius: 3px; height: 4px; overflow: hidden; }
+    .pbar-fill { height: 4px; border-radius: 3px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .pbar-val { font-size: 9px; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; }
+
+    /* ── FOOTNOTE ───────────────────────────────────────── */
+    .footnote { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+    .footnote-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; }
+    .footnote-text { font-size: 11px; color: var(--muted); line-height: 1.7; }
+    .footnote-text strong { color: var(--text); }
+
+    /* ── MANUAL UPDATE PANEL ─────────────────────────────── */
+    .manual-panel { background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px; overflow: hidden; margin-bottom: 28px; }
+    .manual-toggle { width: 100%; background: none; border: none; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: var(--text); font-family: var(--font-mono); font-size: 12px; }
+    .manual-toggle:hover { background: var(--bg3); }
+    .manual-toggle .arrow { transition: transform 0.2s; }
+    .manual-toggle.open .arrow { transform: rotate(180deg); }
+    .manual-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); }
+    .manual-body.open { display: block; }
+    .manual-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin: 16px 0 10px; }
+    .manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .manual-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .manual-field input, .manual-field select, .manual-field textarea {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .manual-field textarea { resize: vertical; min-height: 56px; font-size: 12px; }
+    .manual-field input:focus, .manual-field select:focus, .manual-field textarea:focus { border-color: var(--accent); }
+    .manual-field select option { background: var(--bg3); }
+    .save-btn { margin-top: 16px; background: var(--accent); color: white; border: none; border-radius: 6px; padding: 9px 22px; font-family: var(--font-mono); font-size: 12px; cursor: pointer; font-weight: 600; letter-spacing: 0.04em; transition: opacity 0.2s; }
+    .save-btn:hover { opacity: 0.85; }
+
+    /* ── DATA SOURCE NOTE ────────────────────────────────── */
+    .source-note { font-size: 10px; color: var(--dim); text-align: center; letter-spacing: 0.05em; line-height: 1.8; padding-top: 12px; border-top: 1px solid var(--border); }
+    .source-note a { color: var(--muted); text-decoration: none; }
+    .source-note a:hover { color: var(--text); }
+
+    /* ── LOADING SKELETON ────────────────────────────────── */
+    .skeleton { background: linear-gradient(90deg, var(--bg3) 25%, var(--border) 50%, var(--bg3) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; color: transparent !important; user-select: none; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── ERROR TOAST ─────────────────────────────────────── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--danger-bg); border: 1px solid var(--danger-bd); color: var(--danger); font-size: 12px; padding: 10px 16px; border-radius: 8px; display: none; z-index: 999; max-width: 320px; }
+
+    /* ── OMC UNDER-RECOVERY DETAIL ──────────────────────── */
+    .omc-detail { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .omc-detail span { color: var(--text); }
+
+    @media (max-width: 600px) {
+      .city-grid { grid-template-columns: 1fr; }
+      .int-header, .int-row { grid-template-columns: 2fr 1fr 1fr; }
+      .int-drain { display: none; }
+      .verdict { grid-template-columns: 1fr; }
+      .verdict-months { font-size: 36px; }
+      .radar-grid { grid-template-columns: 1fr 1fr; }
+      .pressure-box { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>Triple Trigger Monitor</h1>
+    <div class="subtitle">India Economic Stress Dashboard &nbsp;·&nbsp; Auto-refreshes on load</div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="last-updated">Fetching data...</div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">↻ Refresh Now</button>
+  </div>
+</div>
+
+<!-- STATUS BANNER -->
+<div class="banner" id="banner">
+  <div class="dot" id="banner-dot"></div>
+  <span id="banner-text">Loading system status...</span>
+</div>
+
+<!-- EARLY WARNING RADAR -->
+<div class="section-label">Early Warning Radar — Upstream Pressure Signals</div>
+<div class="radar-grid">
+
+  <div class="radar-card warn" id="radar-bdti">
+    <div class="radar-label">Baltic Dirty Tanker Index</div>
+    <div class="radar-value" id="bdti-val">—</div>
+    <div class="radar-status" id="bdti-status">Shipping cost index</div>
+    <div class="radar-trend" id="bdti-trend">—</div>
+  </div>
+
+  <div class="radar-card warn" id="radar-urals">
+    <div class="radar-label">Brent – Urals Spread</div>
+    <div class="radar-value" id="urals-val">—</div>
+    <div class="radar-status" id="urals-status">Russian crude discount</div>
+    <div class="radar-trend" id="urals-trend">—</div>
+  </div>
+
+  <div class="radar-card warn" id="radar-omc">
+    <div class="radar-label">OMC Under-Recovery</div>
+    <div class="radar-value" id="omc-val">—</div>
+    <div class="radar-status" id="omc-status">₹/litre loss at pump</div>
+    <div class="radar-trend" id="omc-trend">—</div>
+    <div class="omc-detail" id="omc-detail"></div>
+  </div>
+
+  <div class="radar-card warn" id="radar-fii">
+    <div class="radar-label">FII Weekly Net Flow</div>
+    <div class="radar-value" id="fii-val">—</div>
+    <div class="radar-status" id="fii-status">₹ Cr equity+debt</div>
+    <div class="radar-trend" id="fii-trend">—</div>
+  </div>
+
+  <div class="radar-card warn" id="radar-vlcc">
+    <div class="radar-label">VLCC India-Bound</div>
+    <div class="radar-value" id="vlcc-val">—</div>
+    <div class="radar-status">Tanker count (manual)</div>
+    <div class="radar-trend" id="vlcc-trend">—</div>
+  </div>
+
+</div>
+
+<!-- TRIGGER CARDS -->
+<div class="section-label">Three Trigger Thresholds</div>
+<div class="triggers-grid">
+
+  <div class="trigger-card warn" id="card-petrol">
+    <div class="card-top">
+      <div class="card-name">Petrol Price</div>
+      <div class="status-badge" id="petrol-badge">Loading</div>
+    </div>
+    <div class="card-value" id="petrol-value">—</div>
+    <div class="card-threshold">Trigger threshold: <span>₹115 – ₹120 / litre</span></div>
+    <div class="progress-wrap"><div class="progress-bar" id="petrol-bar" style="width:0%"></div></div>
+    <div class="card-meta">
+      <span id="petrol-pct">0% of threshold</span>
+      <span class="months" id="petrol-months">— months to trigger</span>
+    </div>
+  </div>
+
+  <div class="trigger-card warn" id="card-lpg">
+    <div class="card-top">
+      <div class="card-name">LPG Cylinder (14.2 kg)</div>
+      <div class="status-badge" id="lpg-badge">Loading</div>
+    </div>
+    <div class="card-value" id="lpg-value">—</div>
+    <div class="card-threshold">Trigger threshold: <span>₹1,200 / cylinder</span></div>
+    <div class="progress-wrap"><div class="progress-bar" id="lpg-bar" style="width:0%"></div></div>
+    <div class="card-meta">
+      <span id="lpg-pct">0% of threshold</span>
+      <span class="months" id="lpg-months">— months to trigger</span>
+    </div>
+  </div>
+
+  <div class="trigger-card safe" id="card-food">
+    <div class="card-top">
+      <div class="card-name">Food Inflation (CPI)</div>
+      <div class="status-badge" id="food-badge">Loading</div>
+    </div>
+    <div class="card-value" id="food-value">—</div>
+    <div class="card-threshold">Trigger threshold: <span>8.0% – 10.0%</span></div>
+    <div class="progress-wrap"><div class="progress-bar" id="food-bar" style="width:0%"></div></div>
+    <div class="card-meta">
+      <span id="food-pct">0% of threshold</span>
+      <span class="months" id="food-months">— months to trigger</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- CITY COMPARISON -->
+<div class="section-label">Delhi vs Chennai — Retail Petrol Today</div>
+<div class="city-grid">
+
+  <div class="city-card" id="city-delhi">
+    <div class="city-header">
+      <div class="city-dot" style="background:#3b82f6"></div>
+      <div class="city-name">Delhi</div>
+      <div class="city-state">NCT · No VAT surcharge</div>
+    </div>
+    <div class="city-price" id="delhi-price">—</div>
+    <div class="city-unit">₹ per litre</div>
+    <div class="city-breakdown">
+      <div class="breakdown-row">
+        <span class="breakdown-label">Base price (OMC recovery)</span>
+        <span class="breakdown-val" id="delhi-base">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">Central excise duty</span>
+        <span class="breakdown-val">₹19.90</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">Delhi VAT (19.40%)</span>
+        <span class="breakdown-val" id="delhi-vat">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">Dealer commission</span>
+        <span class="breakdown-val">₹4.40</span>
+      </div>
+    </div>
+    <div class="city-delta" id="delhi-delta">—</div>
+  </div>
+
+  <div class="city-card" id="city-chennai">
+    <div class="city-header">
+      <div class="city-dot" style="background:#f59e0b"></div>
+      <div class="city-name">Chennai</div>
+      <div class="city-state">Tamil Nadu · Higher VAT</div>
+    </div>
+    <div class="city-price" id="chennai-price">—</div>
+    <div class="city-unit">₹ per litre</div>
+    <div class="city-breakdown">
+      <div class="breakdown-row">
+        <span class="breakdown-label">Base price (OMC recovery)</span>
+        <span class="breakdown-val" id="chennai-base">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">Central excise duty</span>
+        <span class="breakdown-val">₹19.90</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">TN VAT (15% + ₹11.11)</span>
+        <span class="breakdown-val" id="chennai-vat">—</span>
+      </div>
+      <div class="breakdown-row">
+        <span class="breakdown-label">Dealer commission</span>
+        <span class="breakdown-val">₹4.40</span>
+      </div>
+    </div>
+    <div class="city-delta" id="chennai-delta">—</div>
+  </div>
+
+</div>
+
+<!-- LIVE MARKET DATA -->
+<div class="section-label">Live Market Inputs</div>
+<div class="live-row">
+  <div class="live-card">
+    <div class="live-label">Brent Crude Oil</div>
+    <div class="live-value" id="crude-val">—</div>
+    <div class="live-sub">USD per barrel · ICE</div>
+    <div class="live-change" id="crude-change">—</div>
+  </div>
+  <div class="live-card">
+    <div class="live-label">USD / INR Rate</div>
+    <div class="live-value" id="inr-val">—</div>
+    <div class="live-sub">Indian Rupee per 1 USD</div>
+    <div class="live-change" id="inr-change">—</div>
+  </div>
+  <div class="live-card">
+    <div class="live-label">India Import Price</div>
+    <div class="live-value" id="import-val">—</div>
+    <div class="live-sub">₹ per barrel (est.)</div>
+    <div class="live-change flat">Crude × INR rate</div>
+  </div>
+  <div class="live-card">
+    <div class="live-label">Days Since Last Hike</div>
+    <div class="live-value" id="days-val">—</div>
+    <div class="live-sub">OMC price revision</div>
+    <div class="live-change" id="days-note">—</div>
+  </div>
+</div>
+
+<!-- INTERVENTION STATUS TABLE -->
+<div class="section-label">Government Intervention Tracker</div>
+<div class="interventions">
+  <div class="int-header">
+    <span>Intervention</span>
+    <span>Status</span>
+    <span style="text-align:center">Holdout</span>
+    <span>Fiscal Cost</span>
+  </div>
+  <div class="int-row">
+    <div class="int-name">Excise Duty Cut (Petrol/Diesel)<span class="sub">Centre can cut up to ₹10/L from current ₹19.90</span></div>
+    <div><span class="int-status status-partial">STANDBY</span></div>
+    <div class="int-hold">+6 mo</div>
+    <div class="int-drain">~₹1L Cr/yr</div>
+  </div>
+  <div class="int-row">
+    <div class="int-name">Russian Crude Discount Imports<span class="sub">Urals at $15–20 below Brent via Mundra/Jamnagar</span></div>
+    <div><span class="int-status status-active">ACTIVE</span></div>
+    <div class="int-hold">+10 mo</div>
+    <div class="int-drain">OPEC+ risk</div>
+  </div>
+  <div class="int-row">
+    <div class="int-name">LPG DBT Top-up (Ujjwala HH)<span class="sub">Cash-back to 9.5 Cr households — price held high</span></div>
+    <div><span class="int-status status-active">ACTIVE</span></div>
+    <div class="int-hold">+8 mo</div>
+    <div class="int-drain">₹22K Cr/yr</div>
+  </div>
+  <div class="int-row">
+    <div class="int-name">FCI Open Market Sales (OMSS)<span class="sub">Weekly wheat/rice e-auctions on NCDEX</span></div>
+    <div><span class="int-status status-active">ACTIVE</span></div>
+    <div class="int-hold">+5 mo</div>
+    <div class="int-drain">Buffer stock</div>
+  </div>
+  <div class="int-row">
+    <div class="int-name">Import Duty Zero — Edible Oil / Dal<span class="sub">WTO workaround — reduces kitchen inflation</span></div>
+    <div><span class="int-status status-active">ACTIVE</span></div>
+    <div class="int-hold">+4 mo</div>
+    <div class="int-drain">WTO pressure</div>
+  </div>
+  <div class="int-row">
+    <div class="int-name">Reliance Retail Price Anchor<span class="sub">JioMart / 18K+ stores holding staple prices</span></div>
+    <div><span class="int-status status-partial">ESTIMATED</span></div>
+    <div class="int-hold">+6 mo</div>
+    <div class="int-drain">Margin subsidy</div>
+  </div>
+</div>
+
+<!-- HOLDOUT VERDICT -->
+<div class="section-label">Predicted Holdout Window</div>
+<div class="verdict" id="verdict-box">
+  <div>
+    <div class="verdict-label" id="verdict-label">Current Assessment</div>
+    <div class="verdict-text" id="verdict-text">Calculating based on live data...</div>
+  </div>
+  <div>
+    <div class="verdict-months" id="verdict-months">—</div>
+    <div class="verdict-months-label">months until<br>triple trigger</div>
+  </div>
+  <div class="pressure-box" id="pressure-box">
+    <div class="pressure-title">Upstream Pressure</div>
+    <div class="pressure-score" id="pressure-score">—</div>
+    <div class="pressure-label" id="pressure-label">/ 100</div>
+    <div class="pressure-bars">
+      <div class="pbar-row">
+        <div class="pbar-name">OMC</div>
+        <div class="pbar-wrap"><div class="pbar-fill" id="pbar-omc" style="width:0%"></div></div>
+        <div class="pbar-val" id="pval-omc">0</div>
+      </div>
+      <div class="pbar-row">
+        <div class="pbar-name">Urals</div>
+        <div class="pbar-wrap"><div class="pbar-fill" id="pbar-urals" style="width:0%"></div></div>
+        <div class="pbar-val" id="pval-urals">0</div>
+      </div>
+      <div class="pbar-row">
+        <div class="pbar-name">BDTI</div>
+        <div class="pbar-wrap"><div class="pbar-fill" id="pbar-bdti" style="width:0%"></div></div>
+        <div class="pbar-val" id="pval-bdti">0</div>
+      </div>
+      <div class="pbar-row">
+        <div class="pbar-name">FII</div>
+        <div class="pbar-wrap"><div class="pbar-fill" id="pbar-fii" style="width:0%"></div></div>
+        <div class="pbar-val" id="pval-fii">0</div>
+      </div>
+      <div class="pbar-row">
+        <div class="pbar-name">Rupee</div>
+        <div class="pbar-wrap"><div class="pbar-fill" id="pbar-inr" style="width:0%"></div></div>
+        <div class="pbar-val" id="pval-inr">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANUAL UPDATE PANEL -->
+<div class="manual-panel">
+  <button class="manual-toggle" id="manual-toggle" onclick="toggleManual()">
+    <span>✎ &nbsp;Monthly Manual Update — LPG · Food CPI · FCI · Shipping · Geopolitical</span>
+    <span class="arrow">▾</span>
+  </button>
+  <div class="manual-body" id="manual-body">
+    <div style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.7;">
+      Monthly signals: update around the 12th (MoSPI CPI), 1st (OMC LPG), and weekly for shipping/FII data. Values persist in your browser.
+    </div>
+
+    <div class="manual-section-title">Monthly Economic Signals</div>
+    <div class="manual-grid">
+      <div class="manual-field">
+        <label>LPG Cylinder Price (₹)</label>
+        <input type="number" id="m-lpg" placeholder="e.g. 950" step="0.5" />
+      </div>
+      <div class="manual-field">
+        <label>Food Inflation — CPI % (MoSPI)</label>
+        <input type="number" id="m-food" placeholder="e.g. 4.20" step="0.01" />
+      </div>
+      <div class="manual-field">
+        <label>FCI Buffer Stock — Wheat (MT Lakh)</label>
+        <input type="number" id="m-fci" placeholder="e.g. 280" step="1" />
+      </div>
+      <div class="manual-field">
+        <label>LPG DBT Amount per Cylinder (₹)</label>
+        <input type="number" id="m-dbt" placeholder="e.g. 200" step="1" />
+      </div>
+      <div class="manual-field">
+        <label>Last OMC Price Revision Date</label>
+        <input type="date" id="m-lastrevision" />
+      </div>
+      <div class="manual-field">
+        <label>Refinery + Freight Add-on (₹/L)</label>
+        <input type="number" id="m-refmargin" placeholder="e.g. 9.46" step="0.01" />
+      </div>
+    </div>
+
+    <div class="manual-section-title">Shipping & Upstream Signals (Weekly)</div>
+    <div class="manual-grid">
+      <div class="manual-field">
+        <label>BDTI Index (manual override)</label>
+        <input type="number" id="m-bdti" placeholder="e.g. 850" step="1" />
+      </div>
+      <div class="manual-field">
+        <label>Urals Price (USD/barrel)</label>
+        <input type="number" id="m-urals" placeholder="e.g. 80" step="0.1" />
+      </div>
+      <div class="manual-field">
+        <label>VLCC India-Bound Count (weekly)</label>
+        <input type="number" id="m-vlcc" placeholder="e.g. 12" step="1" />
+      </div>
+      <div class="manual-field">
+        <label>FII Weekly Net Flow (₹ Cr, negative=outflow)</label>
+        <input type="number" id="m-fii" placeholder="e.g. -2400" step="100" />
+      </div>
+    </div>
+
+    <div class="manual-section-title">Geopolitical Risk</div>
+    <div class="manual-grid">
+      <div class="manual-field">
+        <label>Hormuz / Shipping Risk Level</label>
+        <select id="m-georisk">
+          <option value="0">Low — No major disruption</option>
+          <option value="1">Moderate — Tensions elevated</option>
+          <option value="2">High — Active conflict / partial closure</option>
+          <option value="3">Critical — Strait closed / major attack</option>
+        </select>
+      </div>
+      <div class="manual-field" style="grid-column: span 2">
+        <label>Geopolitical Context Note</label>
+        <textarea id="m-geonote" placeholder="e.g. US-Iran conflict ongoing, Hormuz partially disrupted..."></textarea>
+      </div>
+    </div>
+
+    <div class="manual-section-title">General Notes</div>
+    <div class="manual-grid">
+      <div class="manual-field" style="grid-column: span 2">
+        <label>Notes / Context</label>
+        <textarea id="m-notes" placeholder="Add context for this month's readings..."></textarea>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveManual()">Save &amp; Recalculate</button>
+    <span id="save-confirm" style="display:none;margin-left:12px;font-size:11px;color:var(--safe);">✓ Saved</span>
+  </div>
+</div>
+
+<!-- HISTORICAL PRECEDENT -->
+<div class="footnote">
+  <div class="footnote-title">Historical Precedent — Why Triple Trigger Matters</div>
+  <div class="footnote-text">
+    <strong>2012–13 UPA-II:</strong> Diesel at ₹52, LPG at ₹410, food inflation at 11.5% — all three converging simultaneously. Voter anger crystallised into the 2014 BJP landslide (UPA reduced to 44 seats from 206).
+    &nbsp;·&nbsp; <strong>2021–22:</strong> Petrol crossed ₹110 in Oct 2021. Centre cut excise by ₹5 before UP elections. Bought 18 months of headroom.
+    &nbsp;·&nbsp; <strong>May 2026:</strong> Four hikes in 11 days (₹7.50/L cumulative) after 76-day freeze. OMCs absorbed ~₹1,000 Cr/day losses. Hormuz disruption + rupee at ₹96 = both crude and FX working against India simultaneously.
+    &nbsp;·&nbsp; <strong>Pattern:</strong> Each individual trigger is manageable. <strong>All three simultaneously = the cushion breaks</strong> — the government runs out of single levers large enough to compensate, and media externalisation ("global phenomenon") stops working because household pain is visible across all three daily-use categories at once.
+    &nbsp;·&nbsp; <strong>The upstream signal:</strong> BDTI spikes, Urals spread narrows, FII outflows, rupee weakens — these move 4–8 weeks before the pump price. The Early Warning Radar catches the pressure before it reaches households.
+  </div>
+</div>
+
+<!-- SOURCE NOTE -->
+<div class="source-note">
+  Live: <a href="https://oilpriceapi.com" target="_blank">oilpriceapi.com</a> (Brent + Urals crude) &nbsp;·&nbsp;
+  <a href="https://goodreturns.in" target="_blank">goodreturns.in</a> (retail petrol) &nbsp;·&nbsp;
+  <a href="https://open.er-api.com" target="_blank">open.er-api.com</a> (USD/INR) &nbsp;·&nbsp;
+  <a href="https://nsdl.com" target="_blank">nsdl.com</a> (FII flows) &nbsp;·&nbsp;
+  <a href="https://stooq.com" target="_blank">stooq.com</a> (BDTI) &nbsp;·&nbsp;
+  Manual: <a href="https://mospi.gov.in" target="_blank">mospi.gov.in</a> (CPI) &nbsp;·&nbsp;
+  <a href="https://ppac.gov.in" target="_blank">ppac.gov.in</a> (price build-up) &nbsp;·&nbsp;
+  <a href="https://iocl.com" target="_blank">iocl.com</a> (LPG) &nbsp;·&nbsp;
+  <a href="https://marinetraffic.com" target="_blank">marinetraffic.com</a> (VLCC count)<br/>
+  OMC under-recovery formula: (Crude×INR/159) + Refinery add-on − (RetailPrice−Excise−Dealer)/1.194 &nbsp;·&nbsp; PPAC build-up verified May 2026
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const OIL_API_KEY = '78ac0bb4109a1045b996153eaf91774c8cf6de04a45c06d6bbe56a9f0281f5f8';
+
+const TRIGGERS = { petrol: 115, lpg: 1200, food: 8.0 };
+
+// PPAC-verified constants (April 2026 build-up, Business Standard May 15 2026)
+const EXCISE      = 19.90;   // Central excise, fixed per litre
+const DEALER      = 4.40;    // Dealer commission (updated from PPAC April 2026)
+const DELHI_VAT   = 0.194;   // 19.4% Delhi VAT rate
+const CHENNAI_VAT_PCT  = 0.15;
+const CHENNAI_VAT_FLAT = 11.11;
+
+// Pressure index weights
+const P_WEIGHTS = { omc: 25, urals: 20, bdti: 20, fii: 20, inr: 15 };
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  crude: null,
+  inr: null,
+  delhiPetrol: null,
+  chennaiPetrol: null,
+  urals: null,
+  // manual
+  lpg: null,
+  food: null,
+  fci: null,
+  dbt: null,
+  lastRevision: null,
+  refMargin: null,
+  bdti: null,
+  vlcc: null,
+  fiiFlow: null,
+  geoRisk: null,
+  geoNote: '',
+  notes: ''
+};
+
+// ─── LOAD MANUAL VALUES FROM LOCALSTORAGE ────────────────────────────────────
+function loadManual() {
+  const saved = JSON.parse(localStorage.getItem('tt_manual') || '{}');
+  state.lpg          = saved.lpg          || 913;
+  state.food         = saved.food         || 4.20;
+  state.fci          = saved.fci          || 280;
+  state.dbt          = saved.dbt          || 200;
+  state.lastRevision = saved.lastRevision || '2026-05-25';  // updated: 4th hike date
+  state.refMargin    = saved.refMargin    || 9.46;           // PPAC-verified April 2026
+  state.bdti         = saved.bdti         || null;
+  state.vlcc         = saved.vlcc         || null;
+  state.fiiFlow      = saved.fiiFlow      || null;
+  state.geoRisk      = saved.geoRisk      != null ? saved.geoRisk : 2; // default: High (Hormuz active)
+  state.geoNote      = saved.geoNote      || 'US-Iran conflict ongoing. Strait of Hormuz partially disrupted. Brent near $97.';
+  state.notes        = saved.notes        || '';
+
+  // Populate fields
+  set_val('m-lpg',          state.lpg);
+  set_val('m-food',         state.food);
+  set_val('m-fci',          state.fci);
+  set_val('m-dbt',          state.dbt);
+  set_val('m-lastrevision', state.lastRevision);
+  set_val('m-refmargin',    state.refMargin);
+  if (state.bdti)    set_val('m-bdti',  state.bdti);
+  if (state.vlcc)    set_val('m-vlcc',  state.vlcc);
+  if (state.fiiFlow) set_val('m-fii',   state.fiiFlow);
+  document.getElementById('m-georisk').value = state.geoRisk;
+  set_val('m-geonote', state.geoNote);
+  set_val('m-notes',   state.notes);
+}
+
+function saveManual() {
+  state.lpg          = parseFloat(document.getElementById('m-lpg').value)          || state.lpg;
+  state.food         = parseFloat(document.getElementById('m-food').value)         || state.food;
+  state.fci          = parseFloat(document.getElementById('m-fci').value)          || state.fci;
+  state.dbt          = parseFloat(document.getElementById('m-dbt').value)          || state.dbt;
+  state.lastRevision = document.getElementById('m-lastrevision').value             || state.lastRevision;
+  state.refMargin    = parseFloat(document.getElementById('m-refmargin').value)    || state.refMargin;
+  const bdtiIn = parseFloat(document.getElementById('m-bdti').value);
+  const vlccIn = parseFloat(document.getElementById('m-vlcc').value);
+  const fiiIn  = parseFloat(document.getElementById('m-fii').value);
+  if (!isNaN(bdtiIn)) state.bdti    = bdtiIn;
+  if (!isNaN(vlccIn)) state.vlcc    = vlccIn;
+  if (!isNaN(fiiIn))  state.fiiFlow = fiiIn;
+  state.geoRisk      = parseInt(document.getElementById('m-georisk').value);
+  state.geoNote      = document.getElementById('m-geonote').value;
+  state.notes        = document.getElementById('m-notes').value;
+
+  localStorage.setItem('tt_manual', JSON.stringify({
+    lpg: state.lpg, food: state.food, fci: state.fci,
+    dbt: state.dbt, lastRevision: state.lastRevision,
+    refMargin: state.refMargin,
+    bdti: state.bdti, vlcc: state.vlcc, fiiFlow: state.fiiFlow,
+    geoRisk: state.geoRisk, geoNote: state.geoNote, notes: state.notes
+  }));
+  const c = document.getElementById('save-confirm');
+  c.style.display = 'inline';
+  setTimeout(() => c.style.display = 'none', 2500);
+  renderAll();
+}
+
+// ─── FETCH CRUDE OIL ─────────────────────────────────────────────────────────
+async function fetchCrude() {
+  try {
+    const r = await fetch('https://api.oilpriceapi.com/v1/prices/latest?by_code=BRENT_CRUDE_USD', {
+      headers: { 'Authorization': `Token ${OIL_API_KEY}`, 'Content-Type': 'application/json' }
+    });
+    const d = await r.json();
+    if (d.status === 'success') state.crude = parseFloat(d.data.price);
+  } catch(e) {
+    showToast('Crude API error — using last known value');
+    state.crude = state.crude || 96.57; // May 28 2026 actual
+  }
+}
+
+// ─── FETCH URALS PRICE ───────────────────────────────────────────────────────
+async function fetchUrals() {
+  try {
+    const r = await fetch('https://api.oilpriceapi.com/v1/prices/latest?by_code=URALS_USD', {
+      headers: { 'Authorization': `Token ${OIL_API_KEY}`, 'Content-Type': 'application/json' }
+    });
+    const d = await r.json();
+    if (d.status === 'success') state.urals = parseFloat(d.data.price);
+  } catch(e) {
+    // fallback: estimate spread from manual or default $15 discount
+    state.urals = state.urals || (state.crude ? state.crude - 15 : 81.57);
+  }
+}
+
+// ─── FETCH USD/INR ───────────────────────────────────────────────────────────
+async function fetchINR() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const d = await r.json();
+    if (d.result === 'success') state.inr = d.rates.INR;
+  } catch(e) {
+    try {
+      const r2 = await fetch('https://api.frankfurter.app/latest?from=USD&to=INR');
+      const d2 = await r2.json();
+      state.inr = d2.rates?.INR || state.inr || 96.09; // May 28 2026 actual
+    } catch(e2) {
+      state.inr = state.inr || 96.09;
+    }
+  }
+}
+
+// ─── FETCH PETROL PRICES (GoodReturns via CORS proxy) ────────────────────────
+async function fetchPetrolPrices() {
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=' +
+      encodeURIComponent('https://www.goodreturns.in/petrol-price-in-new-delhi.html');
+    const r = await fetch(proxyUrl);
+    const d = await r.json();
+    const html = d.contents || '';
+    const match = html.match(/Today.*?petrol.*?price.*?Rs\.\s*([\d.]+)|₹\s*([\d.]+)\s*per litre/i);
+    if (match) {
+      const price = parseFloat(match[1] || match[2]);
+      if (price > 80 && price < 150) state.delhiPetrol = price;
+    }
+    const proxyUrl2 = 'https://api.allorigins.win/get?url=' +
+      encodeURIComponent('https://www.goodreturns.in/petrol-price-in-chennai.html');
+    const r2 = await fetch(proxyUrl2);
+    const d2 = await r2.json();
+    const html2 = d2.contents || '';
+    const match2 = html2.match(/Today.*?petrol.*?price.*?Rs\.\s*([\d.]+)|₹\s*([\d.]+)\s*per litre/i);
+    if (match2) {
+      const price2 = parseFloat(match2[1] || match2[2]);
+      if (price2 > 80 && price2 < 150) state.chennaiPetrol = price2;
+    }
+  } catch(e) { /* fall through */ }
+
+  // Fallback: calculate from crude + INR using PPAC formula
+  if (!state.delhiPetrol && state.crude && state.inr) {
+    const base = (state.crude * state.inr / 159) + state.refMargin;
+    state.delhiPetrol   = Math.round((base + EXCISE + base * DELHI_VAT + DEALER) * 100) / 100;
+    state.chennaiPetrol = Math.round((base + EXCISE + base * CHENNAI_VAT_PCT + CHENNAI_VAT_FLAT + DEALER) * 100) / 100;
+  }
+
+  // Last resort defaults (May 25 2026 actuals after 4th hike)
+  if (!state.delhiPetrol)   state.delhiPetrol   = 102.12;
+  if (!state.chennaiPetrol) state.chennaiPetrol = 108.20;
+}
+
+// ─── FETCH BDTI (stooq.com via proxy) ────────────────────────────────────────
+async function fetchBDTI() {
+  // Only fetch if no manual override
+  if (state.bdti) return;
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=' +
+      encodeURIComponent('https://stooq.com/q/?s=bdti');
+    const r = await fetch(proxyUrl);
+    const d = await r.json();
+    const html = d.contents || '';
+    // Try to extract numeric value from stooq page
+    const match = html.match(/class="n"[^>]*>([\d,]+\.?\d*)/);
+    if (match) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (val > 200 && val < 5000) state.bdti = val;
+    }
+  } catch(e) { /* silent — will show manual prompt */ }
+}
+
+// ─── FETCH FII FLOWS (NSDL via proxy) ────────────────────────────────────────
+async function fetchFII() {
+  if (state.fiiFlow) return; // manual override present
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=' +
+      encodeURIComponent('https://www.nsdl.com/researchweb/rptNew.aspx');
+    const r = await fetch(proxyUrl);
+    const d = await r.json();
+    const html = d.contents || '';
+    // Extract net equity + debt from NSDL table — look for recent net figure
+    const matches = [...html.matchAll(/-?[\d,]+\.?\d*/g)];
+    // NSDL table format: we look for a plausible weekly net FII number
+    // Numbers in range -20000 to 20000 Cr are candidates
+    const candidates = matches
+      .map(m => parseFloat(m[0].replace(/,/g, '')))
+      .filter(v => Math.abs(v) > 100 && Math.abs(v) < 25000);
+    if (candidates.length > 0) {
+      // Take the last plausible value (most recent)
+      state.fiiFlow = candidates[candidates.length - 1];
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ─── CALCULATE OMC UNDER-RECOVERY ────────────────────────────────────────────
+function calcOMC() {
+  if (!state.crude || !state.inr || !state.delhiPetrol) return null;
+  const importParity = (state.crude * state.inr / 159) + state.refMargin;
+  const omcRecovery  = (state.delhiPetrol - EXCISE - DEALER) / (1 + DELHI_VAT);
+  return omcRecovery - importParity; // positive = profit, negative = under-recovery
+}
+
+// ─── CALCULATE PRESSURE INDEX ────────────────────────────────────────────────
+function calcPressureIndex() {
+  const scores = { omc: 0, urals: 0, bdti: 0, fii: 0, inr: 0 };
+
+  // OMC Under-recovery (25 pts) — most direct hike signal
+  const omc = calcOMC();
+  if (omc !== null) {
+    if (omc < -8)  scores.omc = 25;
+    else if (omc < -4)  scores.omc = 18;
+    else if (omc < -1)  scores.omc = 10;
+    else if (omc < 2)   scores.omc = 5;
+    else                scores.omc = 0;
+  }
+
+  // Urals spread (20 pts) — narrowing = India paying more
+  if (state.crude && state.urals) {
+    const spread = state.crude - state.urals;
+    if (spread < 6)       scores.urals = 20;
+    else if (spread < 10) scores.urals = 13;
+    else if (spread < 14) scores.urals = 6;
+    else                  scores.urals = 0;
+  }
+
+  // BDTI (20 pts) — rising freight = supply stress
+  if (state.bdti) {
+    if (state.bdti > 1400)      scores.bdti = 20;
+    else if (state.bdti > 1000) scores.bdti = 13;
+    else if (state.bdti > 700)  scores.bdti = 6;
+    else                        scores.bdti = 0;
+  } else {
+    // Estimate from geo risk if BDTI not available
+    scores.bdti = [0, 4, 10, 18][state.geoRisk || 0];
+  }
+
+  // FII flows (20 pts) — outflows = rupee pressure incoming
+  if (state.fiiFlow !== null) {
+    if (state.fiiFlow < -8000)  scores.fii = 20;
+    else if (state.fiiFlow < -4000) scores.fii = 14;
+    else if (state.fiiFlow < -1500) scores.fii = 8;
+    else if (state.fiiFlow < 0)     scores.fii = 3;
+    else                             scores.fii = 0;
+  }
+
+  // Rupee pressure (15 pts)
+  if (state.inr) {
+    if (state.inr > 95)      scores.inr = 15;
+    else if (state.inr > 90) scores.inr = 10;
+    else if (state.inr > 86) scores.inr = 5;
+    else if (state.inr > 83) scores.inr = 2;
+    else                     scores.inr = 0;
+  }
+
+  // Geo risk bonus (affects BDTI estimate above, also adds to total feel)
+  const geoBonus = [0, 2, 5, 8][state.geoRisk || 0];
+
+  const total = Math.min(100,
+    scores.omc + scores.urals + scores.bdti + scores.fii + scores.inr + geoBonus
+  );
+
+  return { total, scores };
+}
+
+// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+function renderAll() {
+  renderLiveMarket();
+  renderRadar();
+  renderTriggerCards();
+  renderCities();
+  renderVerdict();
+  renderBanner();
+  renderTimestamp();
+}
+
+function renderLiveMarket() {
+  if (state.crude) {
+    set('crude-val', '$' + state.crude.toFixed(2));
+    const cl = state.crude < 80 ? 'down' : state.crude < 95 ? 'flat' : 'up';
+    const cl_label = state.crude < 80 ? '▼ Below stress zone' : state.crude < 95 ? '— Moderate zone' : '▲ High stress zone';
+    document.getElementById('crude-change').className = 'live-change ' + cl;
+    set('crude-change', cl_label);
+  }
+  if (state.inr) {
+    set('inr-val', '₹' + state.inr.toFixed(2));
+    const inrCl = state.inr < 86 ? 'flat' : state.inr < 92 ? 'flat' : 'up';
+    document.getElementById('inr-change').className = 'live-change ' + inrCl;
+    set('inr-change', state.inr < 86 ? '— Moderate pressure' : state.inr < 92 ? '▲ Rupee weak' : '▲▲ Rupee very weak — severe import cost pressure');
+  }
+  if (state.crude && state.inr) {
+    const importPrice = Math.round(state.crude * state.inr);
+    set('import-val', '₹' + importPrice.toLocaleString('en-IN'));
+  }
+  if (state.lastRevision) {
+    const days = Math.floor((new Date() - new Date(state.lastRevision)) / 86400000);
+    set('days-val', days);
+    const dCl = days < 15 ? 'flat' : days < 45 ? 'warn' : 'up';
+    document.getElementById('days-note').className = 'live-change ' + dCl;
+    const dLabel = days < 15 ? 'Recent revision' : days < 45 ? '▲ Watch — OMC absorbing losses' : '▲▲ Long freeze — suppressed pricing, hike imminent';
+    set('days-note', state.notes || dLabel);
+  }
+}
+
+// ─── RENDER RADAR ────────────────────────────────────────────────────────────
+function renderRadar() {
+  const omc = calcOMC();
+
+  // BDTI
+  if (state.bdti) {
+    const bdtiClass = state.bdti > 1400 ? 'danger' : state.bdti > 1000 ? 'warn' : 'safe';
+    const bdtiTrend = state.bdti > 1400 ? '▲ High — freight stress' : state.bdti > 1000 ? '▲ Elevated' : '✓ Normal range';
+    setRadarCard('radar-bdti', 'bdti-val', 'bdti-status', 'bdti-trend',
+      bdtiClass, state.bdti.toLocaleString(), 'Tanker shipping index', bdtiTrend);
+  } else {
+    const geoLabels = ['✓ No data — enter manually', '— Moderate (est.)', '▲ Elevated (Hormuz active)', '▲▲ Critical — disruption active'];
+    const geoClass  = ['warn', 'warn', 'warn', 'danger'][state.geoRisk || 0];
+    setRadarCard('radar-bdti', 'bdti-val', 'bdti-status', 'bdti-trend',
+      geoClass, '—', 'Enter in manual panel', geoLabels[state.geoRisk || 0]);
+  }
+
+  // URALS SPREAD
+  if (state.crude && state.urals) {
+    const spread = state.crude - state.urals;
+    const uralsClass = spread < 6 ? 'danger' : spread < 12 ? 'warn' : 'safe';
+    const uralsTrend = spread < 6 ? '▲ Narrow — India discount gone' : spread < 12 ? '— Thinning, watch closely' : '✓ Discount holding';
+    setRadarCard('radar-urals', 'urals-val', 'urals-status', 'urals-trend',
+      uralsClass, '$' + spread.toFixed(1) + ' disc.', `Urals $${state.urals.toFixed(1)} vs Brent $${state.crude.toFixed(1)}`, uralsTrend);
+  } else {
+    setRadarCard('radar-urals', 'urals-val', 'urals-status', 'urals-trend',
+      'warn', '—', 'Fetching Urals price...', '—');
+  }
+
+  // OMC UNDER-RECOVERY
+  if (omc !== null) {
+    const omcClass = omc < -4 ? 'danger' : omc < 0 ? 'warn' : 'safe';
+    const omcTrend = omc < -8 ? '▲▲ Severe — hike imminent' : omc < -4 ? '▲ Hike pressure building' : omc < 0 ? '— Under-recovery, manageable' : '✓ OMC in profit';
+    const importParity = (state.crude * state.inr / 159) + state.refMargin;
+    const omcRecovery  = (state.delhiPetrol - EXCISE - DEALER) / (1 + DELHI_VAT);
+    setRadarCard('radar-omc', 'omc-val', 'omc-status', 'omc-trend',
+      omcClass,
+      (omc >= 0 ? '+' : '') + '₹' + Math.abs(omc).toFixed(2) + '/L',
+      omc >= 0 ? 'Profit per litre' : 'Loss per litre',
+      omcTrend);
+    set('omc-detail',
+      `Import parity: ₹${importParity.toFixed(2)} · OMC recovery: ₹${omcRecovery.toFixed(2)}`);
+  }
+
+  // FII FLOWS
+  if (state.fiiFlow !== null) {
+    const fiiClass = state.fiiFlow < -6000 ? 'danger' : state.fiiFlow < -2000 ? 'warn' : 'safe';
+    const fiiTrend = state.fiiFlow < -6000 ? '▲ Heavy outflow — rupee stress' : state.fiiFlow < -2000 ? '▲ Outflow — watch rupee' : state.fiiFlow < 0 ? '— Mild outflow' : '✓ Net inflow';
+    const fiiDisp = (state.fiiFlow >= 0 ? '+' : '') + '₹' + Math.round(state.fiiFlow).toLocaleString('en-IN') + ' Cr';
+    setRadarCard('radar-fii', 'fii-val', 'fii-status', 'fii-trend',
+      fiiClass, fiiDisp, 'Weekly net equity+debt', fiiTrend);
+  } else {
+    setRadarCard('radar-fii', 'fii-val', 'fii-status', 'fii-trend',
+      'warn', '—', 'Enter in manual panel', '— Awaiting data');
+  }
+
+  // VLCC COUNT
+  if (state.vlcc !== null) {
+    const vlccClass = state.vlcc < 6 ? 'danger' : state.vlcc < 10 ? 'warn' : 'safe';
+    const vlccTrend = state.vlcc < 6 ? '▲ Low arrivals — supply risk' : state.vlcc < 10 ? '— Below normal' : '✓ Normal flow';
+    setRadarCard('radar-vlcc', 'vlcc-val', 'vlcc-status', 'vlcc-trend',
+      vlccClass, state.vlcc + ' vessels', 'India-bound VLCCs (weekly)', vlccTrend);
+  } else {
+    setRadarCard('radar-vlcc', 'vlcc-val', 'vlcc-status', 'vlcc-trend',
+      'warn', '—', 'Enter weekly count manually', '— Awaiting data');
+  }
+
+  // Geo risk note in context
+  if (state.geoNote) {
+    const geoNoteEl = document.getElementById('omc-detail');
+    if (geoNoteEl && state.geoRisk >= 2) {
+      const omc = calcOMC();
+      const importParity = state.crude && state.inr ? (state.crude * state.inr / 159) + state.refMargin : 0;
+      const omcRec = state.delhiPetrol ? (state.delhiPetrol - EXCISE - DEALER) / (1 + DELHI_VAT) : 0;
+      geoNoteEl.innerHTML = `Import parity: ₹${importParity.toFixed(2)} · OMC recovery: ₹${omcRec.toFixed(2)}<br><span style="color:var(--warn)">⚡ ${state.geoNote}</span>`;
+    }
+  }
+}
+
+function setRadarCard(cardId, valId, statusId, trendId, cls, val, status, trend) {
+  const card = document.getElementById(cardId);
+  card.className = 'radar-card ' + cls;
+  set(valId, val);
+  set(statusId, status);
+  set(trendId, trend);
+}
+
+function renderTriggerCards() {
+  // PETROL
+  const petrol = state.delhiPetrol || 102.12;
+  const petrolPct = Math.min(100, Math.round((petrol / TRIGGERS.petrol) * 100));
+  const petrolClass = petrol >= TRIGGERS.petrol ? 'danger' : petrol >= 105 ? 'warn' : 'safe';
+  const petrolBadge = petrol >= TRIGGERS.petrol ? 'TRIGGERED' : petrol >= 105 ? 'WARNING' : 'SAFE';
+  const petrolMonths = petrol >= TRIGGERS.petrol ? 0 : Math.round((TRIGGERS.petrol - petrol) / 0.30);
+  setCard('card-petrol', 'petrol-badge', 'petrol-value', 'petrol-bar', 'petrol-pct', 'petrol-months',
+    petrolClass, petrolBadge, '₹' + petrol.toFixed(2) + '/L',
+    petrolPct, petrolPct + '% of trigger threshold',
+    petrolMonths <= 0 ? '⚠ Triggered' : petrolMonths + ' est. months to trigger');
+
+  // LPG
+  const lpg = state.lpg || 913;
+  const effectiveLpg = Math.max(lpg - (state.dbt || 200), 0);
+  const lpgPct = Math.min(100, Math.round((lpg / TRIGGERS.lpg) * 100));
+  const lpgClass = lpg >= TRIGGERS.lpg ? 'danger' : lpg >= 1050 ? 'warn' : 'safe';
+  const lpgBadge = lpg >= TRIGGERS.lpg ? 'TRIGGERED' : lpg >= 1050 ? 'WARNING' : 'SAFE';
+  const lpgMonths = lpg >= TRIGGERS.lpg ? 0 : Math.round((TRIGGERS.lpg - lpg) / 12);
+  setCard('card-lpg', 'lpg-badge', 'lpg-value', 'lpg-bar', 'lpg-pct', 'lpg-months',
+    lpgClass, lpgBadge, '₹' + lpg.toFixed(0) + '/cyl',
+    lpgPct, lpgPct + '% of threshold (DBT net: ₹' + effectiveLpg + ')',
+    lpgMonths <= 0 ? '⚠ Triggered' : lpgMonths + ' est. months to trigger');
+
+  // FOOD
+  const food = state.food || 4.20;
+  const foodPct = Math.min(100, Math.round((food / TRIGGERS.food) * 100));
+  const foodClass = food >= TRIGGERS.food ? 'danger' : food >= 6.5 ? 'warn' : 'safe';
+  const foodBadge = food >= TRIGGERS.food ? 'TRIGGERED' : food >= 6.5 ? 'WARNING' : 'SAFE';
+  const foodMonths = food >= TRIGGERS.food ? 0 : Math.round((TRIGGERS.food - food) / 0.15);
+  setCard('card-food', 'food-badge', 'food-value', 'food-bar', 'food-pct', 'food-months',
+    foodClass, foodBadge, food.toFixed(2) + '%',
+    foodPct, foodPct + '% of trigger threshold',
+    foodMonths <= 0 ? '⚠ Triggered' : foodMonths + ' est. months to trigger');
+}
+
+function setCard(cardId, badgeId, valId, barId, pctId, monthsId, cls, badge, value, pct, pctText, monthsText) {
+  const card = document.getElementById(cardId);
+  card.className = 'trigger-card ' + cls;
+  document.getElementById(badgeId).textContent = badge;
+  document.getElementById(valId).textContent = value;
+  document.getElementById(barId).style.width = pct + '%';
+  document.getElementById(pctId).textContent = pctText;
+  document.getElementById(monthsId).textContent = monthsText;
+}
+
+function renderCities() {
+  const d = state.delhiPetrol   || 102.12;
+  const c = state.chennaiPetrol || 108.20;
+  set('delhi-price',   '₹' + d.toFixed(2));
+  set('chennai-price', '₹' + c.toFixed(2));
+
+  // PPAC-correct breakdown
+  const dBase = (d - EXCISE - DEALER) / (1 + DELHI_VAT);
+  const cBase = (c - EXCISE - DEALER - CHENNAI_VAT_FLAT) / (1 + CHENNAI_VAT_PCT);
+  set('delhi-base',   '₹' + Math.max(dBase, 55).toFixed(2));
+  set('chennai-base', '₹' + Math.max(cBase, 55).toFixed(2));
+  set('delhi-vat',    '₹' + (dBase * DELHI_VAT).toFixed(2));
+  set('chennai-vat',  '₹' + (cBase * CHENNAI_VAT_PCT + CHENNAI_VAT_FLAT).toFixed(2));
+
+  const diff = Math.abs(c - d).toFixed(2);
+  const cheaper = d < c ? 'Delhi' : 'Chennai';
+  const pctFromTrigger_d = (((TRIGGERS.petrol - d) / d) * 100).toFixed(1);
+  const pctFromTrigger_c = (((TRIGGERS.petrol - c) / c) * 100).toFixed(1);
+  set('delhi-delta',   d < c
+    ? `Delhi is ₹${diff} cheaper than Chennai · ${pctFromTrigger_d}% below ₹115 trigger`
+    : `Delhi is ₹${diff} more expensive · ${pctFromTrigger_d}% below ₹115 trigger`);
+  set('chennai-delta', c > d
+    ? `Chennai is ₹${diff} more expensive than Delhi · ${pctFromTrigger_c}% below ₹115 trigger`
+    : `Chennai is ₹${diff} cheaper · ${pctFromTrigger_c}% below ₹115 trigger`);
+}
+
+function renderVerdict() {
+  const petrol = state.delhiPetrol || 102.12;
+  const lpg    = state.lpg         || 913;
+  const food   = state.food        || 4.20;
+
+  const petrolMonths = petrol >= TRIGGERS.petrol ? 0 : Math.round((TRIGGERS.petrol - petrol) / 0.30);
+  const lpgMonths    = lpg    >= TRIGGERS.lpg    ? 0 : Math.round((TRIGGERS.lpg - lpg) / 12);
+  const foodMonths   = food   >= TRIGGERS.food   ? 0 : Math.round((TRIGGERS.food - food) / 0.15);
+  const overall      = Math.min(petrolMonths, lpgMonths, foodMonths);
+  const triggeredCount = [petrol >= TRIGGERS.petrol, lpg >= TRIGGERS.lpg, food >= TRIGGERS.food].filter(Boolean).length;
+
+  const box = document.getElementById('verdict-box');
+  set('verdict-months', overall <= 0 ? '0' : overall);
+
+  let verdictClass, label, text;
+  const firstTrigger = petrolMonths <= lpgMonths && petrolMonths <= foodMonths ? 'Petrol' : lpgMonths <= foodMonths ? 'LPG' : 'Food Inflation';
+
+  if (triggeredCount >= 2) {
+    verdictClass = 'danger'; label = 'CRITICAL — Multiple Triggers Active';
+    text = `${triggeredCount} of 3 triggers have been breached simultaneously. The cushion has broken. Intervention levers are no longer sufficient to absorb combined household pain.`;
+  } else if (triggeredCount === 1) {
+    verdictClass = 'warn'; label = 'WARNING — One Trigger Active';
+    text = `One trigger has breached. Government can still manage with targeted interventions. Critical window before second breach: ~${Math.min(lpgMonths, foodMonths, petrolMonths)} months. Watch monsoon and crude price.`;
+  } else if (overall <= 6) {
+    verdictClass = 'warn'; label = 'CAUTION — Short Runway';
+    text = `No trigger active yet but ${firstTrigger} is only ~${overall} months away. Upstream pressure is high. Government must activate remaining intervention levers within 60 days.`;
+  } else if (overall <= 14) {
+    verdictClass = 'warn'; label = 'WATCH — Moderate Holdout';
+    text = `Current interventions provide ~${overall} months of runway. First trigger to breach: ${firstTrigger}. A Hormuz escalation or crude spike above $110 would reduce this window by 3–5 months.`;
+  } else {
+    verdictClass = 'safe'; label = 'STABLE — Adequate Runway';
+    text = `~${overall} months before any trigger is breached under present conditions. Monitor crude oil, rupee trajectory, and kharif season as leading indicators.`;
+  }
+
+  box.style.background  = verdictClass === 'safe' ? 'var(--safe-bg)'   : verdictClass === 'warn' ? 'var(--warn-bg)'   : 'var(--danger-bg)';
+  box.style.borderColor = verdictClass === 'safe' ? 'var(--safe-bd)'   : verdictClass === 'warn' ? 'var(--warn-bd)'   : 'var(--danger-bd)';
+  const monthsColor = verdictClass === 'safe' ? 'var(--safe)' : verdictClass === 'warn' ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('verdict-months').style.color = monthsColor;
+  set('verdict-label', label);
+  set('verdict-text',  text);
+
+  // Render pressure index
+  const { total, scores } = calcPressureIndex();
+  const pidxColor = total >= 61 ? 'var(--danger)' : total >= 31 ? 'var(--warn)' : 'var(--safe)';
+  const pidxLabel = total >= 61 ? 'HIGH PRESSURE' : total >= 31 ? 'MODERATE' : 'LOW PRESSURE';
+
+  document.getElementById('pressure-score').style.color = pidxColor;
+  set('pressure-score', total);
+  document.getElementById('pressure-label').style.color = pidxColor;
+  set('pressure-label', '/ 100 · ' + pidxLabel);
+
+  // Sub-bars
+  const barColor = (score, max) => {
+    const pct = score / max;
+    return pct >= 0.7 ? 'var(--danger)' : pct >= 0.4 ? 'var(--warn)' : 'var(--safe)';
+  };
+
+  const setBPar = (name, score, max) => {
+    const fill = document.getElementById('pbar-' + name);
+    if (fill) { fill.style.width = Math.round((score/max)*100) + '%'; fill.style.background = barColor(score, max); }
+    set('pval-' + name, score);
+  };
+
+  setBPar('omc',   scores.omc,   P_WEIGHTS.omc);
+  setBPar('urals', scores.urals, P_WEIGHTS.urals);
+  setBPar('bdti',  scores.bdti,  P_WEIGHTS.bdti);
+  setBPar('fii',   scores.fii,   P_WEIGHTS.fii);
+  setBPar('inr',   scores.inr,   P_WEIGHTS.inr);
+}
+
+function renderBanner() {
+  const petrol = state.delhiPetrol || 102.12;
+  const lpg    = state.lpg         || 913;
+  const food   = state.food        || 4.20;
+  const triggered = [petrol >= TRIGGERS.petrol, lpg >= TRIGGERS.lpg, food >= TRIGGERS.food].filter(Boolean).length;
+
+  const banner = document.getElementById('banner');
+  const dot    = document.getElementById('banner-dot');
+  const text   = document.getElementById('banner-text');
+
+  if (triggered >= 3) {
+    banner.style.background = 'var(--danger-bg)'; banner.style.borderColor = 'var(--danger-bd)';
+    dot.style.background = 'var(--danger)'; text.style.color = 'var(--danger)';
+    text.textContent = '⚠  ALL THREE TRIGGERS BREACHED — Cushion has broken. Economic stress fully visible to households.';
+  } else if (triggered === 2) {
+    banner.style.background = 'var(--danger-bg)'; banner.style.borderColor = 'var(--danger-bd)';
+    dot.style.background = 'var(--danger)'; text.style.color = 'var(--danger)';
+    text.textContent = `⚠  TWO TRIGGERS BREACHED — Critical zone. Government intervention capacity is strained.`;
+  } else if (triggered === 1) {
+    banner.style.background = 'var(--warn-bg)'; banner.style.borderColor = 'var(--warn-bd)';
+    dot.style.background = 'var(--warn)'; text.style.color = 'var(--warn)';
+    text.textContent = `⚡  ONE TRIGGER ACTIVE — Government managing. Watch for second trigger breach.`;
+  } else {
+    const { total } = calcPressureIndex();
+    if (total >= 61) {
+      banner.style.background = 'var(--warn-bg)'; banner.style.borderColor = 'var(--warn-bd)';
+      dot.style.background = 'var(--warn)'; text.style.color = 'var(--warn)';
+      text.textContent = `⚡  NO TRIGGERS BREACHED — But upstream pressure is HIGH (${total}/100). Hike pressure building in pipeline.`;
+    } else {
+      banner.style.background = 'var(--safe-bg)'; banner.style.borderColor = 'var(--safe-bd)';
+      dot.style.background = 'var(--safe)'; text.style.color = 'var(--safe)';
+      text.textContent = `✓  ALL THREE TRIGGERS BELOW THRESHOLD — No simultaneous breach. Upstream pressure: ${total}/100.`;
+    }
+  }
+}
+
+function renderTimestamp() {
+  const now = new Date();
+  set('last-updated', 'Updated: ' + now.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }));
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function set_val(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 4000);
+}
+function toggleManual() {
+  document.getElementById('manual-toggle').classList.toggle('open');
+  document.getElementById('manual-body').classList.toggle('open');
+}
+
+// ─── MAIN LOAD ───────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ Fetching...';
+  set('last-updated', 'Fetching live data...');
+
+  loadManual();
+
+  await Promise.allSettled([
+    fetchCrude(),
+    fetchUrals(),
+    fetchINR(),
+    fetchPetrolPrices(),
+    fetchBDTI(),
+    fetchFII()
+  ]);
+
+  renderAll();
+
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh Now';
+}
+
+// ─── BOOT ────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
